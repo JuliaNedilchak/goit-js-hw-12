@@ -24,17 +24,63 @@ async function onFormSubmit(e) {
   imageName = name;
   loader.style.display = 'block';
   pageNumber = 1;
-  const images = await getImages(name);
-  totalResult = images.totalHits;
-  if (images.hits.length === 0) {
-    gallery.innerHTML = '';
-    loader.style.display = 'none';
-    loadButton.style.display = 'none';
-    iziToast.error({
-      message:
-        'Sorry, there are no images matching your search query. Please try again!',
+  try {
+    const images = await getImages(name);
+    totalResult = images.totalHits;
+    if (images.hits.length === 0) {
+      gallery.innerHTML = '';
+      loader.style.display = 'none';
+      loadButton.style.display = 'none';
+      iziToast.error({
+        message:
+          'Sorry, there are no images matching your search query. Please try again!',
+      });
+    } else {
+      loader.style.display = 'none';
+      const markup = images.hits
+        .map(image => {
+          return `<li class="item"> <a class="gallery-link" href="${image.largeImageURL}">
+    <img
+      class="gallery-image"
+     
+      src="${image.webformatURL}"
+      
+      alt="${image.tags}"
+    />
+  </a><ul class="list">
+  <li class="group"><p class="desc">likes<span class="amount">${image.likes}</span></p></li>
+  <li class="group"><p class="desc">views<span class="amount"> ${image.views}</span></p></li>
+  <li class="group"><p class="desc">comments<span class="amount"> ${image.comments}</span></p></li>
+  <li class="group"><p class="desc">downloads<span class="amount"> ${image.downloads}</span></p></li>
+  </ul>
+  </li>`;
+        })
+        .join('');
+
+      gallery.innerHTML = markup;
+      loadButton.style.display = 'block';
+    }
+
+    const lightbox = new SimpleLightbox('.gallery a', {
+      captionsData: 'alt',
+      captionDelay: 250,
     });
-  } else {
+    lightbox.refresh();
+    checkButtonStatus();
+  } catch (error) {
+    console.error('Error data:', error);
+  }
+}
+form.reset();
+
+loadButton.addEventListener('click', loadMoreClick);
+
+async function loadMoreClick() {
+  pageNumber += 1;
+  loader.style.display = 'block';
+  try {
+    const images = await getImages();
+
     loader.style.display = 'none';
     const markup = images.hits
       .map(image => {
@@ -56,57 +102,19 @@ async function onFormSubmit(e) {
       })
       .join('');
 
-    gallery.innerHTML = markup;
-    loadButton.style.display = 'block';
+    gallery.insertAdjacentHTML('beforeend', markup);
+    scrollAnotherGroup();
+    const lightbox = new SimpleLightbox('.gallery a', {
+      captionsData: 'alt',
+      captionDelay: 250,
+    });
+
+    lightbox.refresh();
+
+    checkButtonStatus();
+  } catch (error) {
+    console.error('Error data:', error);
   }
-
-  const lightbox = new SimpleLightbox('.gallery a', {
-    captionsData: 'alt',
-    captionDelay: 250,
-  });
-  lightbox.refresh();
-  checkButtonStatus();
-  form.reset();
-}
-loadButton.addEventListener('click', loadMoreClick);
-
-async function loadMoreClick() {
-  pageNumber += 1;
-  loader.style.display = 'block';
-
-  const images = await getImages();
-
-  loader.style.display = 'none';
-  const markup = images.hits
-    .map(image => {
-      return `<li class="item"> <a class="gallery-link" href="${image.largeImageURL}">
-    <img
-      class="gallery-image"
-     
-      src="${image.webformatURL}"
-      
-      alt="${image.tags}"
-    />
-  </a><ul class="list">
-  <li class="group"><p class="desc">likes<span class="amount">${image.likes}</span></p></li>
-  <li class="group"><p class="desc">views<span class="amount"> ${image.views}</span></p></li>
-  <li class="group"><p class="desc">comments<span class="amount"> ${image.comments}</span></p></li>
-  <li class="group"><p class="desc">downloads<span class="amount"> ${image.downloads}</span></p></li>
-  </ul>
-  </li>`;
-    })
-    .join('');
-
-  gallery.insertAdjacentHTML('beforeend', markup);
-  scrollAnotherGroup();
-  const lightbox = new SimpleLightbox('.gallery a', {
-    captionsData: 'alt',
-    captionDelay: 250,
-  });
-
-  lightbox.refresh();
-
-  checkButtonStatus();
   form.reset();
 }
 function checkButtonStatus() {
